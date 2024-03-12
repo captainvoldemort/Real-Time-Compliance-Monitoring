@@ -2,10 +2,10 @@ import cv2
 import numpy as np
 import pandas as pd
 import torch
+from yoloDet import YoloTRT
 
 # Load YOLOv5 model for ID card and lanyard segmentation
-# Assuming yolov5 model is already downloaded and available
-model = torch.hub.load('ultralytics/yolov5', 'custom', path='best.pt', force_reload=True)
+model = YoloTRT(library="yolov5/build/libmyplugins.so", engine="yolov5/build/yolov5s.engine", conf=0.5, yolo_ver="v5")
 
 # Initialize human body and face detection cascades
 body_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_upperbody.xml')
@@ -54,7 +54,7 @@ def process_frame(frame):
             person_name = recognize_face(face_roi)
             
             # Perform ID card and lanyard segmentation using YOLOv5
-            results = model(frame)
+            detections, t = model.Inference(frame)
             # Parse results to check if person is wearing ID card/lanyard
             wearing_id = True  # Placeholder for ID card detection result
             wearing_lanyard = True  # Placeholder for lanyard detection result
