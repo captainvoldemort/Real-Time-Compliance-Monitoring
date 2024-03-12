@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import pandas as pd
 import torch
+from deepface import DeepFace
 from yoloDet import YoloTRT
 
 # Load YOLOv5 model for ID card and lanyard segmentation
@@ -32,9 +33,17 @@ def detect_faces(frame):
     return faces
 
 # Function to recognize face using face recognition algorithm
-def recognize_face(face_roi):
-    # Implement face recognition algorithm here
-    return "John Doe"  # Placeholder for the recognized name
+def recognize_face(face_roi, db_path=''):
+    # Use DeepFace to find matches in the database
+    dfs = DeepFace.find(img=face_roi, db_path=db_path)
+    
+    # Extract the name of the most likely match from the first dataframe
+    if not dfs:
+        return "Unknown"
+    else:
+        most_likely_match = dfs[0].iloc[0]
+        recognized_name = most_likely_match["identity"]
+        return recognized_name
 
 # Function to process each frame from video feed
 def process_frame(frame):
