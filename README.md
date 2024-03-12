@@ -19,7 +19,7 @@ This project aims to develop a real-time human identification and ID card detect
 - OpenCV
 - PyTorch
 - YOLOv5
-- Face recognition library
+- deepFace
 - Pandas
 
 ## **Installation**
@@ -27,7 +27,7 @@ This project aims to develop a real-time human identification and ID card detect
 1. Clone the repository to your local machine:
     
     ```bash
-    git clone https://github.com/your_username/project_name.git
+    git clone https://github.com/yashreadytobox/ID-CARD-VERIFICATION.git
     ```
     
 2. Install the required dependencies: Follow the steps given in the github page below to carry out installations on Jetson Nano 4GB Dev Kit.
@@ -36,6 +36,9 @@ https://github.com/yashreadytobox/JetsonYolov5
 4. Replace the face recognition placeholder with your own face recognition model or algorithm.
 
 ## **Usage**
+Before running first create a database by registering users through `register_user` script. 
+
+(Make sure that all the paths provided are accurate.)
 
 1. Navigate to the project directory:
     
