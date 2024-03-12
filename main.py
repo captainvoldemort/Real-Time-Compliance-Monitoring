@@ -3,7 +3,11 @@ import numpy as np
 import pandas as pd
 import torch
 from deepface import DeepFace
+from deepface.basemodels import VGGFace
 from yoloDet import YoloTRT
+
+#Face Recognition model
+face_model = VGGFace.loadModel()
 
 # Load YOLOv5 model for ID card and lanyard segmentation
 model = YoloTRT(library="yolov5/build/libmyplugins.so", engine="yolov5/build/yolov5s.engine", conf=0.5, yolo_ver="v5")
@@ -35,7 +39,7 @@ def detect_faces(frame):
 # Function to recognize face using face recognition algorithm
 def recognize_face(face_roi, db_path=''):
     # Use DeepFace to find matches in the database
-    dfs = DeepFace.find(img=face_roi, db_path=db_path)
+    dfs = DeepFace.find(img=face_roi, db_path=db_path, model_name = 'VGG-Face', model = face_model)
     
     # Extract the name of the most likely match from the first dataframe
     if not dfs:
