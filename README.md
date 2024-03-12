@@ -36,9 +36,11 @@ https://github.com/yashreadytobox/JetsonYolov5
 4. Replace the face recognition placeholder with your own face recognition model or algorithm.
 
 ## **Usage**
-Before running first create a database by registering users through `register_user` script. 
+Model best.pt is obtained from training procedure followed in `train_yolov5_object_detection.ipynb.`
 
-(Make sure that all the paths provided are accurate.)
+Before running on the edge device first create a database by registering users through `register_user` script. 
+
+(Note: Make sure that all the paths provided are accurate.)
 
 1. Navigate to the project directory:
     
