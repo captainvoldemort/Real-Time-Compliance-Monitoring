@@ -39,7 +39,7 @@ def detect_faces(frame):
 # Function to recognize face using face recognition algorithm
 def recognize_face(face_roi, db_path=''):
     # Use DeepFace to find matches in the database
-    dfs = DeepFace.find(img=face_roi, db_path=db_path, model_name = 'VGG-Face', model = face_model)
+    dfs = DeepFace.find(img=face_roi, db_path=db_path, model_name = 'VGG-Face', model = face_model, distance_metric = 'cosine')
     
     # Extract the name of the most likely match from the first dataframe
     if not dfs:
