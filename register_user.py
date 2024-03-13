@@ -9,15 +9,10 @@ face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_fronta
 recognizer = cv2.face.LBPHFaceRecognizer_create()
 
 # Function to capture images and store in dataset folder
-def capture_images(user_name, prn):
-    # Create a directory to store the captured images if it doesn't exist
+def capture_images(User):
+    # Create a directory to store the captured images
     if not os.path.exists('Faces'):
         os.makedirs('Faces')
-
-    # Create a directory for the user if it doesn't exist
-    user_folder = os.path.join('Faces', f'{user_name}_{prn}')
-    if not os.path.exists(user_folder):
-        os.makedirs(user_folder)
 
     # Open the camera
     cap = cv2.VideoCapture(0)
@@ -39,8 +34,8 @@ def capture_images(user_name, prn):
         for (x, y, w, h) in faces:
             cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
-            # Store the captured face images in the user's folder
-            cv2.imwrite(f'{user_folder}/{user_name}_{prn}_{count}.jpg', gray[y:y + h, x:x + w])
+            # Store the captured face images in the Faces folder
+            cv2.imwrite(f'Faces/{User}_{count}.jpg', gray[y:y + h, x:x + w])
 
             count += 1
 
@@ -59,8 +54,33 @@ def capture_images(user_name, prn):
     cap.release()
     cv2.destroyAllWindows()
 
-# Example usage:
-user_name = input("Enter the name of the person: ")
-prn = input("Enter the PRN (Personnel Registration Number): ")
-capture_images(user_name, prn)
+# Function to add a new user to the dataset
+def add_new_user():
+    user_name = input("Enter the name of the new user: ")
+    capture_images(user_name)
 
+# Main function to capture images for each user
+def main():
+    # If the Faces directory already exists, prompt to add new users
+    if os.path.exists('Faces'):
+        add_more = input("Faces directory already exists. Do you want to add more users? (y/n): ").lower()
+        if add_more == 'y':
+            add_new_user()
+    else:
+        # Create a directory to store the captured images
+        os.makedirs('Faces')
+
+    # Define user names
+    users = os.listdir('Faces')
+
+    # Capture images for each user
+    for user in users:
+        capture_images(user)
+
+    # Save the label dictionary to a file
+    with open('label_mapping.txt', 'w') as file:
+        for idx, user in enumerate(users):
+            file.write(f"{user}: {idx}\n")
+
+if __name__ == "__main__":
+    main()
