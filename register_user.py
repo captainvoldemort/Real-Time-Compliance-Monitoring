@@ -1,52 +1,66 @@
-import os
 import cv2
+import os
+import numpy as np
 
-def capture_images():
-    # Input the name of the person
-    person_name = input("Enter the name of the person: ")
-    
-    # Input the PRN (Personnel Registration Number)
-    prn = input("Enter the PRN (Personnel Registration Number): ")
-    
-    # Create a folder with the person's name and PRN if it doesn't exist
-    folder_name = f"{person_name}_{prn}"
-    folder_path = os.path.join("dataset", folder_name)
-    os.makedirs(folder_path, exist_ok=True)
-    
-    # Initialize the camera
+# Create a face detector
+face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+
+# Generate a face recognition model
+recognizer = cv2.face.LBPHFaceRecognizer_create()
+
+# Function to capture images and store in dataset folder
+def capture_images(user_name, prn):
+    # Create a directory to store the captured images if it doesn't exist
+    if not os.path.exists('Faces'):
+        os.makedirs('Faces')
+
+    # Create a directory for the user if it doesn't exist
+    user_folder = os.path.join('Faces', f'{user_name}_{prn}')
+    if not os.path.exists(user_folder):
+        os.makedirs(user_folder)
+
+    # Open the camera
     cap = cv2.VideoCapture(0)
-    
-    # Capture 5-10 frames containing face images
-    num_images = 0
-    while num_images < 10:
+
+    # Set the image counter as 0
+    count = 0
+
+    while True:
+        # Read a frame from the camera
         ret, frame = cap.read()
-        if not ret:
-            print("Error capturing image from the camera.")
-            break
-        
-        # Detect faces in the frame
-        face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+
+        # Convert the frame to grayscale
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        faces = face_cascade.detectMultiScale(gray, 1.3, 5)
-        
-        # Save each detected face as an image in the folder
+
+        # Detect faces in the grayscale frame
+        faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+
+        # Draw rectangles around the faces and store the images
         for (x, y, w, h) in faces:
-            face_roi = frame[y:y+h, x:x+w]
-            image_name = f"{folder_name}_{num_images}.jpg"
-            image_path = os.path.join(folder_path, image_name)
-            cv2.imwrite(image_path, face_roi)
-            num_images += 1
-        
-        # Display the frame with face detections
-        cv2.imshow("Capture Faces", frame)
-        
-        # Wait for a key press to capture the next frame
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+
+            # Store the captured face images in the user's folder
+            cv2.imwrite(f'{user_folder}/{user_name}_{prn}_{count}.jpg', gray[y:y + h, x:x + w])
+
+            count += 1
+
+        # Display the frame with face detection
+        cv2.imshow('Capture Faces', frame)
+
+        # Break the loop if the 'q' key is pressed
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
-    
-    # Release the camera and close all OpenCV windows
+
+        # Break the loop after capturing a certain number of images
+        if count >= 3000:
+            break
+
+    # Release the camera and close windows
     cap.release()
     cv2.destroyAllWindows()
 
-# Call the function to capture images and create the dataset
-capture_images()
+# Example usage:
+user_name = input("Enter the name of the person: ")
+prn = input("Enter the PRN (Personnel Registration Number): ")
+capture_images(user_name, prn)
+
