@@ -1,107 +1,83 @@
-import cv2
-import numpy as np
-import pandas as pd
-import torch
-from deepface import DeepFace
-from deepface.basemodels import VGGFace
+import cv2 
+import imutils
+import os
+import face_recognition
+import csv
 from yoloDet import YoloTRT
+from datetime import datetime
 
-#Face Recognition model
-face_model = VGGFace.loadModel()
+KNOWN_FACES_DIR = './known_faces'
+TOLERANCE = 0.6
+MODEL = 'cnn'  # default: 'hog', other one can be 'cnn' - CUDA accelerated (if available) deep-learning pretrained model
 
-# Load YOLOv5 model for ID card and lanyard segmentation
-model = YoloTRT(library="yolov5/build/libmyplugins.so", engine="yolov5/build/yolov5s.engine", conf=0.5, yolo_ver="v5")
+# Returns (R, G, B) from name
+def name_to_color(name):
+    # Take 3 first letters, tolower()
+    # lowercased character ord() value range is 97 to 122, subtract 97, multiply by 8
+    color = [(ord(c.lower())-97)*8 for c in name[:3]]
+    return color
 
-# Initialize human body and face detection cascades
-body_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_upperbody.xml')
-face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+print('Loading known faces...')
+known_faces = []
+known_names = []
 
-# Initialize DataFrame to store results
-results_df = pd.DataFrame(columns=['Person', 'Face Detected', 'Wearing ID Card', 'Wearing Lanyard'])
+# We organize known faces as subfolders of KNOWN_FACES_DIR
+# Each subfolder's name becomes our label (name)
+for name in os.listdir(KNOWN_FACES_DIR):
+    # Next we load every file of faces of known person
+    for filename in os.listdir(f'{KNOWN_FACES_DIR}/{name}'):
+        # Load an image
+        image = face_recognition.load_image_file(f'{KNOWN_FACES_DIR}/{name}/{filename}')
+        # Get 128-dimension face encoding
+        # Always returns a list of found faces, for this purpose we take first face only (assuming one face per image as you can't be twice on one image)
+        encoding = face_recognition.face_encodings(image)[0]
+        # Append encodings and name
+        known_faces.append(encoding)
+        known_names.append(name)
 
-# Function to detect upper body in a frame and return cropped region
-def detect_upper_body(frame):
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    bodies = body_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
-    
-    if len(bodies) > 0:
-        x, y, w, h = bodies[0]  # Consider only the first detected body
-        return frame[y:y+h, x:x+w], (x, y, w, h)
-    else:
-        return None, None
+# Initialize YOLO model
+model = YoloTRT(library="./models/libmyplugins.so", engine="./models/id-lanyard_detection.engine", conf=0.5, yolo_ver="v5")
 
-# Function to detect faces in a frame
-def detect_faces(frame):
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
-    return faces
+# Open CSV file for writing
+with open('records.csv', mode='w', newline='') as file:
+    writer = csv.writer(file)
+    writer.writerow(['Timestamp', 'Name', 'ID', 'Lanyard'])
 
-# Function to recognize face using face recognition algorithm
-def recognize_face(face_roi, db_path=''):
-    # Use DeepFace to find matches in the database
-    dfs = DeepFace.find(img=face_roi, db_path=db_path, model_name = 'VGG-Face', model = face_model, distance_metric = 'cosine')
-    
-    # Extract the name of the most likely match from the first dataframe
-    if not dfs:
-        return "Unknown"
-    else:
-        most_likely_match = dfs[0].iloc[0]
-        recognized_name = most_likely_match["identity"]
-        return recognized_name
+    # Load the video
+    cap = cv2.VideoCapture("/dev/video0", cv2.CAP_V4L2)
 
-# Function to process each frame from video feed
-def process_frame(frame):
-    # Detect upper body in frame
-    upper_body, body_coords = detect_upper_body(frame)
-    
-    if upper_body is not None:
-        # Detect faces in upper body region
-        faces = detect_faces(upper_body)
-        
-        if len(faces) > 0:
-            # Get the first detected face
-            x, y, w, h = faces[0]
-            face_roi = upper_body[y:y+h, x:x+w]
-            
-            # Recognize face
-            person_name = recognize_face(face_roi)
-            
-            # Perform ID card and lanyard segmentation using YOLOv5
-            detections, t = model.Inference(frame)
-            # Parse results to check if person is wearing ID card/lanyard
-            wearing_id = True  # Placeholder for ID card detection result
-            wearing_lanyard = True  # Placeholder for lanyard detection result
-            
-            # Update results DataFrame
-            results_df.loc[len(results_df)] = [person_name, True, wearing_id, wearing_lanyard]
-            
-            # Save results to CSV file
-            results_df.to_csv('results.csv', index=False)
-    
-    return frame
-
-# Function to process video feed
-def process_video(video_path):
-    cap = cv2.VideoCapture(video_path)
-    while cap.isOpened():
+    while True:
         ret, frame = cap.read()
-        if not ret:
-            break
+        frame = imutils.resize(frame)
         
-        processed_frame = process_frame(frame)
+        # Face detection and recognition
+        locations = face_recognition.face_locations(frame, model=MODEL)
+        encodings = face_recognition.face_encodings(frame, locations)
+        for face_encoding, face_location in zip(encodings, locations):
+            results = face_recognition.compare_faces(known_faces, face_encoding, TOLERANCE)
+            if True in results:  # If at least one is true, get a name of first of found labels
+                match = known_names[results.index(True)]
+                
+                # Object detection to check if wearing an ID and a Lanyard
+                wearing_id = False
+                wearing_lanyard = False
+                detections, _ = model.Inference(frame)
+                for obj in detections:
+                    if obj['class'] == 'Card':
+                        # Assuming 'Card' represents the ID card class detected by the model
+                        wearing_id = True
+                    if obj['class'] == 'Lanyard':
+                        # Assuming 'Lanyard' represents the lanyard class detected by the model
+                        wearing_lanyard = True
+                
+                # Write to CSV with timestamp
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                writer.writerow([timestamp, match, wearing_id, wearing_lanyard])
         
-        cv2.imshow('Processed Frame', processed_frame)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        cv2.imshow("Output", frame)
+        key = cv2.waitKey(1)
+        if key == ord('q'):
             break
-    
+
     cap.release()
     cv2.destroyAllWindows()
-
-# Main function to start processing
-def main():
-    # Provide path to video feed
-    video_path = 'video_feed.mp4'
-    process_video(video_path)
-
-if __name__ == "__main__":
-    main()
