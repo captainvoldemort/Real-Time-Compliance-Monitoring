@@ -23,15 +23,7 @@ class YoloTRT():
         self.LEN_ALL_RESULT = 38001
         self.LEN_ONE_RESULT = 38
         self.yolo_version = yolo_ver
-        self.categories = ["person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light",
-            "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", "dog", "horse", "sheep", "cow",
-            "elephant", "bear", "zebra", "giraffe", "backpack", "umbrella", "handbag", "tie", "suitcase", "frisbee",
-            "skis", "snowboard", "sports ball", "kite", "baseball bat", "baseball glove", "skateboard", "surfboard",
-            "tennis racket", "bottle", "wine glass", "cup", "fork", "knife", "spoon", "bowl", "banana", "apple",
-            "sandwich", "orange", "broccoli", "carrot", "hot dog", "pizza", "donut", "cake", "chair", "couch",
-            "potted plant", "bed", "dining table", "toilet", "tv", "laptop", "mouse", "remote", "keyboard", "cell phone",
-            "microwave", "oven", "toaster", "sink", "refrigerator", "book", "clock", "vase", "scissors", "teddy bear",
-            "hair drier", "toothbrush"]
+        self.categories = ["Card","Lanyard"]
         
         TRT_LOGGER = trt.Logger(trt.Logger.INFO)
 
@@ -46,6 +38,7 @@ class YoloTRT():
 
         for binding in self.engine:
             size = trt.volume(self.engine.get_binding_shape(binding)) * self.batch_size
+            #size = trt.volume(self.engine.get_binding_shape(binding))
             dtype = trt.nptype(self.engine.get_binding_dtype(binding))
             host_mem = cuda.pagelocked_empty(size, dtype)
             cuda_mem = cuda.mem_alloc(host_mem.nbytes)
@@ -89,6 +82,7 @@ class YoloTRT():
 
     def Inference(self, img):
         input_image, image_raw, origin_h, origin_w = self.PreProcessImg(img)
+        #host_inputs[0] = np.zeros(input_image.ravel().shape, dtype=host_inputs[0].dtype)
         np.copyto(host_inputs[0], input_image.ravel())
         stream = cuda.Stream()
         self.context = self.engine.create_execution_context()
