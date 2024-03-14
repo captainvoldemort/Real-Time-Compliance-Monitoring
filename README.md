@@ -22,6 +22,7 @@ This repository contains code for a real-time compliance monitoring system desig
 - **Update register_user.py**: This is an updated version of the **`register_user.py`** script, incorporating improvements or bug fixes.
 - **train_yolov5_object_detection.ipynb**: This Jupyter Notebook contains code for training the YOLOv5 object detection model. After training, it generates a **`best.pt`** file, which is used for inference.
 - **yoloDet.py**: This Python script contains classes and functions related to the YOLOv5 object detection model, including inference.
+- **known_faces/**: Directory containing images of registered users for face recognition. Each user's images are stored in a separate folder named as `PRN_Name-Surname`.
 
 ### **Project Workflow**
 
